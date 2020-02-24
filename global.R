@@ -148,8 +148,8 @@ sf=meta$a_SFO1[1]
 
 test2=filter_multiplicity(dfp=plist, noise=as.numeric(noi))
 mult.match=do.call(rbind, test2[[1]])
-mult.match$status='matched'
-mult.um=cbind(do.call(rbind, test2[[2]]), Signal.ID=NA, Signal.nPeaks=NA, Signal.PeakID=NA, status='unmatched')
+mult.match$status='Matched'
+mult.um=cbind(do.call(rbind, test2[[2]]), Signal.ID=NA, Signal.nPeaks=NA, Signal.PeakID=NA, status='Unmatched')
 
 plist=mult=rbind(mult.match, mult.um)
 

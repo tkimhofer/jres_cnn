@@ -3,32 +3,65 @@ library(plotly)
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
-  # fcount is index of feature table
+  # fid is feature ID of feature shown
   fid=reactiveVal()
 
-  
-  # fcount is index of feature table
+  # fidx is index of feature shown
   fidx=reactiveVal()
   fidx(1)
   
+  # data frame that stores features matched as multiplet
+  feat_multdf=reactiveValues()
   
+  # store features characts
   featurelist=reactiveValues()
-  feat_df=reactiveValues()
   
+  observeEvent(fidx(), {
+    browser()
+    # update feat ID
+    fid(plist$feature.ID[fidx()])
+
+    # generate dataframe that contains all signals with the same f2 location
+    idx.sim=which(round(plist$cent.f2, 4)==round(plist$ppm.f2R[fidx()]))
+    if(length(idx.sim>0)){
+      odf=mult[idx.sim,]
+      mac=c('s'=1, 'd'=2, 't'=3, 'dd'=4, 'm'=5)
+      odf$mtype=names(mac)[match(odf$Signal.nPeaks, mac)]
+      odf$mtype[which(odf$Signal.nPeaks>5)]='m'
+      odf$RelInt=round(odf$Int/mult$Int[idx.f],2)
+      odf$mult=paste0(odf$mtype,' (', odf$Signal.PeakID, ')')
+      odf$mult[odf$status=='Unmatched']=NA
+      
+      mach=c("ID"="feature.ID", "F2 position"="ppm.f2R", "F1 position"="cent.f1", 'Rel. Intensity'='RelInt', 'Mult ID'='Signal.ID',  'Mult Pattern'='mult', 'Mult Comment'='ok', 'Mult Status'='status')
+      idx.col=match(mach, colnames(odf))
+      odf=odf[,idx.col]
+      colnames(odf)=names(mach)
+      
+      feat_multdf$mults=odf
+    }
+  }
+  )
+  
+  
+  # 
+  # featurelist=reactiveValues()
+  # feat_df=reactiveValues()
+  # 
   # Hz to ppm
   observeEvent(input$'matchdev',{
     output$ppm=renderText(paste(round(input$'matchdev'/sf,4), 'ppm'))
   }
   )
+  
+  
   ### set up folder where results will be stored
   
-  # get and disply feature ID
-  #featureTbl=reactiveValues(featID=feat.count)
-  #featureTbl(featID=feat.count)
+  # get and display path and file ID
   output$IDspec <- renderText({
     fiID[1]
   })
   
+  # feature and file summary
   output$summarytbl=DT::renderDT({
     datatable(data.frame(desc=c(
       
@@ -63,21 +96,20 @@ server <- function(input, output, session) {
     
     idx=match(mach, colnames(odf))
     odf=odf[,idx]
-    
     colnames(odf)=names(mach)
-    feat_df$odf=odf
+    
     
     datatable(odf, rownames=F, options=list(pageLength=50), selection='single', filter = list(position = 'top', clear = FALSE))
   })
   
-  
+
   observeEvent({
     input$nextFeat
   }, {
-    
     if((fidx()+1)>nrow(plist)){return(NULL)}
     fidx(fidx()+1)
   }, ignoreInit = T, ignoreNULL = T)
+  
   
   observeEvent({
     input$prevFeat
@@ -89,15 +121,9 @@ server <- function(input, output, session) {
   observeEvent({
     input$'manID'
   }, {
-    #browser()
-    
-    if(as.numeric(input$'manID')>nrow(mult)){return(NULL)}
-    
-    idx=which(feat_df$odf$feature.ID==input$'manID')
-    browser()
+    idx=which(plist$feature.ID==as.numeric(input$'manID'))
     if(length(idx)==1){
-      fid(input$'manID')
-      fidx(as.numeric(input$'manID'))
+      fidx(idx)
     }
   }, ignoreInit = T, ignoreNULL = T)
   
@@ -106,11 +132,10 @@ server <- function(input, output, session) {
   }, {
     tblcl=input$featTbl_cell_clicked
     if(length(tblcl)>1){
-      #browser()
-      fid(feat_df$odf$feature.ID[tblcl$row,])
       fidx(tblcl$row)
       updateTabsetPanel(session, inputId='ppopt', selected = "Feature Description")}
   }, ignoreInit = T, ignoreNULL = T)
+  
   
   observeEvent({
     input$info_mult_cell_clicked
@@ -118,7 +143,11 @@ server <- function(input, output, session) {
     tblcl=input$info_mult_cell_clicked
     
     if(length(tblcl)>1){
-      fid(featurelist$mults$ID[tblcl$row])
+      
+      browser()
+      odf=feat_multdf$mults
+      fidx(which(plist$feature.ID==odf$ID[tblcl]))
+      
       updateTabsetPanel(session, inputId='ppopt', selected = "Feature Description")
     }
     
@@ -315,42 +344,18 @@ server <- function(input, output, session) {
     output$info_mult=renderDT(
       { 
         #browser()
-        stat=mult$status[idx.f]
-        #if(stat=='Unmatched'){
-        mult$ppm.f2R=round(mult$cent.f2, 4)
-        idx.sim=which(mult$ppm.f2R==mult$ppm.f2R[idx.f])
-        if(length(idx.sim>0)){
-          
-          odf=mult[idx.sim,]
-          
-          mac=c('s'=1, 'd'=2, 't'=3, 'dd'=4, 'm'=5)
-          odf$mtype=names(mac)[match(odf$Signal.nPeaks, mac)]
-          odf$mtype[which(odf$Signal.nPeaks>5)]='m'
-          
-          odf$RelInt=round(odf$Int/mult$Int[idx.f],2)
-          odf$mult=paste0(odf$mtype,' (', odf$Signal.PeakID, ')')
-          odf$mult[odf$status=='Unmatched']=NA
-          
-          browser()
-          mach=c("ID"="feature.ID", "F2 position"="ppm.f2R", "F1 position"="cent.f1", 'Rel. Intensity'='RelInt', 'Mult ID'='Signal.ID',  'Mult Pattern'='mult', 'Mult Comment'='ok', 'Mult Status'='status')
-          idx.col=match(mach, colnames(odf))
-          odf=odf[,idx.col]
-          
-          colnames(odf)=names(mach)
-          featurelist$mults=odf
+        odf=feat_multdf$mults
+        if(!is.null(odf)){
           datatable(odf, options=list(dom='t', pageLength=6), selection='none',rownames=F) %>%
             formatStyle(
               'ID',
               target = 'row',
               backgroundColor = styleEqual(c(0, idx.f), c('green', '#A9D3DA'))
-            )
-          
-          
+            ) 
         }
-        #  }
         
-        
-      })
+        }
+      )
     
     
     
@@ -358,11 +363,11 @@ server <- function(input, output, session) {
     
     
     
-    # create plotly figures with peaks in bounding box
+    # # create plotly figures with peaks in bounding box
     bbf2ppm=(plist$bb.width.f2[idx.f]/sf)
     idx.c=get.idx(c(plist$cent.f2[idx.f]-bbf2ppm, plist$cent.f2[idx.f]+bbf2ppm), f2ppm)
     idx.r=get.idx(c(plist$cent.f1[idx.f]-plist$bb.width.f1[idx.f], plist$cent.f1[idx.f]+plist$bb.width.f1[idx.f]), f1hz)
-    if(length(idx.c)<2 | length(idx.r)<2){ 
+    if(length(idx.c)<2 | length(idx.r)<2){
       idx.r=c(max((idx.r[1]-2), 1):min(length(f1hz),(idx.r[length(idx.r)]+2)));
       idx.c=c(max((idx.c[1]-2), 1):min(length(f2ppm),(idx.c[length(idx.c)]+2)));
       output$info=renderText(paste('BBox extended as feature too small'))
@@ -370,10 +375,15 @@ server <- function(input, output, session) {
       output$info=renderText(paste(''))
     }
     sub=jr[idx.r, idx.c]
+    
+    #image(featm[idx.f,,])
+    
+    
     # create plot
     noiss=sub
-    noiss[,]=noi
+    noiss[,]=noi/plist$Int[idx.f]
     
+  
     subf1=as.numeric(rownames(sub))
     subf2=as.numeric(colnames(sub))
     
