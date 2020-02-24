@@ -134,13 +134,13 @@ ui<-fluidPage(
                      tabPanel("Database list", 
                               br(),
                               DTOutput('db_full')
-                     )#,
+                     ),
                      
-                     # tabPanel("Peak Classif", 
-                     #          br(),
-                     #          DTOutput('featimg'),
-                     #          actionButton('save_img_train', 'Save images')
-                     # )
+                     tabPanel("Peak Classif",
+                              br(),
+                              DTOutput('featimg'),
+                              actionButton('save_img_train', 'Save images')
+                     )
                      
                      #   tabPanel("Viz", 
                      #            

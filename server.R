@@ -3,17 +3,23 @@ library(plotly)
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
+  # fcount is index of feature table
+  fid=reactiveVal()
+
   
-  fcount=reactiveVal()
-  fcount(feat.count)
+  # fcount is index of feature table
+  fidx=reactiveVal()
+  fidx(1)
+  
   
   featurelist=reactiveValues()
+  feat_df=reactiveValues()
   
   # Hz to ppm
   observeEvent(input$'matchdev',{
-                 output$ppm=renderText(paste(round(input$'matchdev'/sf,4), 'ppm'))
-                 }
-               )
+    output$ppm=renderText(paste(round(input$'matchdev'/sf,4), 'ppm'))
+  }
+  )
   ### set up folder where results will be stored
   
   # get and disply feature ID
@@ -39,6 +45,7 @@ server <- function(input, output, session) {
   
   # produce feature table from peak picked daata
   output$featTbl=DT::renderDT({
+    #browser()
     odf=plist[,-1]
     odf$cent.f1=round(odf$cent.f1, 1)
     odf$cent.f2=round(odf$cent.f2, 4)
@@ -52,12 +59,14 @@ server <- function(input, output, session) {
     odf$mult=paste0(odf$mtype,' (', odf$Signal.PeakID, ')')
     odf$mult[odf$status=='Unmatched']=NA
     
-    mach=c("ID"="featID", "F2 position"="cent.f2", "F1 position"="cent.f1", 'Rel. Intensity'='RelInt', 'Mult ID'='Signal.ID',  'Mult Pattern'='mult', 'Mult Comment'='ok', "F2 box size"="bb.width.f2",  "F1 box size"="bb.width.f1",  "F2 center idx"="f2.idx", "F1 center idx"="f1.idx", "Intensity"="Int")
+    mach=c("ID"="feature.ID", "F2 position"="cent.f2", "F1 position"="cent.f1", 'Rel. Intensity'='RelInt', 'Mult ID'='Signal.ID',  'Mult Pattern'='mult', 'Mult Comment'='ok', "F2 box size"="bb.width.f2",  "F1 box size"="bb.width.f1",  "F2 center idx"="f2.idx", "F1 center idx"="f1.idx", "Intensity"="Int")
     
     idx=match(mach, colnames(odf))
     odf=odf[,idx]
     
     colnames(odf)=names(mach)
+    feat_df$odf=odf
+    
     datatable(odf, rownames=F, options=list(pageLength=50), selection='single', filter = list(position = 'top', clear = FALSE))
   })
   
@@ -66,15 +75,15 @@ server <- function(input, output, session) {
     input$nextFeat
   }, {
     
-    if((fcount()+1)>nrow(plist)){return(NULL)}
-    fcount(fcount()+1)
+    if((fidx()+1)>nrow(plist)){return(NULL)}
+    fidx(fidx()+1)
   }, ignoreInit = T, ignoreNULL = T)
   
   observeEvent({
     input$prevFeat
   }, {
-    if((fcount()-1)<1){return(NULL)}
-    fcount(fcount()-1)
+    if((fidx()-1)<1){return(NULL)}
+    fidx(fidx()-1)
   }, ignoreInit = T, ignoreNULL = T)
   
   observeEvent({
@@ -83,7 +92,13 @@ server <- function(input, output, session) {
     #browser()
     
     if(as.numeric(input$'manID')>nrow(mult)){return(NULL)}
-    fcount(as.numeric(input$'manID'))
+    
+    idx=which(feat_df$odf$feature.ID==input$'manID')
+    browser()
+    if(length(idx)==1){
+      fid(input$'manID')
+      fidx(as.numeric(input$'manID'))
+    }
   }, ignoreInit = T, ignoreNULL = T)
   
   observeEvent({
@@ -91,8 +106,10 @@ server <- function(input, output, session) {
   }, {
     tblcl=input$featTbl_cell_clicked
     if(length(tblcl)>1){
-    fcount(tblcl$row)
-    updateTabsetPanel(session, inputId='ppopt', selected = "Feature Description")}
+      #browser()
+      fid(feat_df$odf$feature.ID[tblcl$row,])
+      fidx(tblcl$row)
+      updateTabsetPanel(session, inputId='ppopt', selected = "Feature Description")}
   }, ignoreInit = T, ignoreNULL = T)
   
   observeEvent({
@@ -101,11 +118,11 @@ server <- function(input, output, session) {
     tblcl=input$info_mult_cell_clicked
     
     if(length(tblcl)>1){
-      fcount(featurelist$mults$ID[tblcl$row])
+      fid(featurelist$mults$ID[tblcl$row])
       updateTabsetPanel(session, inputId='ppopt', selected = "Feature Description")
     }
-   
-   
+    
+    
   }, ignoreInit = T, ignoreNULL = T)
   
   
@@ -125,12 +142,15 @@ server <- function(input, output, session) {
   
   
   # change summary stats and plot depending on selected input ID
-  observeEvent({fcount()}, {
-    idx.f= fcount()
+  observeEvent({fidx()}, {
+    
+    
+    #browser()
+    idx.f= fidx()
     
     
     output$FeatureID <- renderText({
-      paste0('Feature ID ', fcount())
+      paste0('Feature ID ', fid())
     })
     # update plot showing feat intensity distribution
     output$featbb_Int=renderPlot(
@@ -311,8 +331,8 @@ server <- function(input, output, session) {
           odf$mult=paste0(odf$mtype,' (', odf$Signal.PeakID, ')')
           odf$mult[odf$status=='Unmatched']=NA
           
-          #browser()
-          mach=c("ID"="featID", "F2 position"="ppm.f2R", "F1 position"="cent.f1", 'Rel. Intensity'='RelInt', 'Mult ID'='Signal.ID',  'Mult Pattern'='mult', 'Mult Comment'='ok', 'Mult Status'='status')
+          browser()
+          mach=c("ID"="feature.ID", "F2 position"="ppm.f2R", "F1 position"="cent.f1", 'Rel. Intensity'='RelInt', 'Mult ID'='Signal.ID',  'Mult Pattern'='mult', 'Mult Comment'='ok', 'Mult Status'='status')
           idx.col=match(mach, colnames(odf))
           odf=odf[,idx.col]
           
@@ -382,18 +402,18 @@ server <- function(input, output, session) {
     
     # db match output
     #observeEvent({input$'matchdev'},{
-     
-    }, ignoreInit = T, ignoreNULL = T)
     
+  }, ignoreInit = T, ignoreNULL = T)
+  
   
   # db match output
   observeEvent({
-    fcount()
+    fidx()
     input$'matchdev'
-    },{
-      
-      idx.f= fcount()
-
+  },{
+    
+    idx.f= fidx()
+    
     if(!is.null(idx.f)){
       print(paste('re-calc db matches', as.numeric(input$'matchdev'), 'Hz'))
       mac=c('s'=1, 'd'=2, 't'=3, 'dd'=4, 'm'=5)
@@ -414,11 +434,11 @@ server <- function(input, output, session) {
       # }
       
     }
-   
+    
     
     
   }, ignoreInit = T, ignoreNULL = T)
-    
+  
   
   
   # display db in new tab
@@ -460,7 +480,7 @@ server <- function(input, output, session) {
   # save feature list
   observeEvent(input$submit,
                {
-                 featurelist$index=fcount()
+                 featurelist$index=fidx()
                  featurelist$user_input_bboxfit=input$bboxfit
                  featurelist$user_input_signal_def=input$signal_def
                  featurelist$user_input_mult_fine=input$mult_fine
@@ -470,12 +490,12 @@ server <- function(input, output, session) {
                  #browser()
                  featurelist$NMRfile=fiID[1]
                  if(!dir.exists('feat_data')){dir.create('feat_data', showWarnings = TRUE)}
-                 fname=paste0('feat_data/JresFeat_', fcount(), '.Rdata')
+                 fname=paste0('feat_data/JresFeat_', fid(), '.Rdata')
                  out=reactiveValuesToList(featurelist)
                  save(out, file=fname)
                  
                  updateTabsetPanel(session, inputId='ppopt', selected = "Feature Table")
-                
+                 
                  
                  
                  # featurelist$featureMatrix # -> define and assign obove
@@ -483,22 +503,22 @@ server <- function(input, output, session) {
                }, ignoreNULL = T, ignoreInit = T)
   
   
-# 
-#     output$featimg <- DT::renderDataTable({
-#       
-#       DT::datatable(img_df, escape = F, selection=list(target='cell'), options = list(pageLength = nrow(img_df))) # HERE
-#     })
-# 
-#     observeEvent(input$featimg_cells_selected, {
-#       
-#       print(input$featimg_cells_selected)
-#     })
-#   
-#     observeEvent(input$'save_img_train', {
-#       realPeaks=input$featimg_cells_selected
-#       save(img_df, realPeaks, file='FeatClassManual.Rdata')
-#     })
-
+  
+  output$featimg <- DT::renderDataTable({
+    
+    DT::datatable(img_df, escape = F, selection=list(target='cell'), options = list(pageLength = nrow(img_df))) # HERE
+  })
+  
+  observeEvent(input$featimg_cells_selected, {
+    
+    print(input$featimg_cells_selected)
+  })
+  
+  observeEvent(input$'save_img_train', {
+    realPeaks=input$featimg_cells_selected
+    save(img_df, realPeaks, file='FeatClassManual.Rdata')
+  })
+  
   
 }
 
