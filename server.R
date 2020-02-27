@@ -17,7 +17,7 @@ server <- function(input, output, session) {
   featurelist=reactiveValues()
   
   observeEvent(fidx(), {
-    browser()
+    #browser()
     # update feat ID
     fid(plist$feature.ID[fidx()])
 
@@ -144,7 +144,7 @@ server <- function(input, output, session) {
     
     if(length(tblcl)>1){
       
-      browser()
+      #browser()
       odf=feat_multdf$mults
       fidx(which(plist$feature.ID==odf$ID[tblcl]))
       
@@ -199,10 +199,17 @@ server <- function(input, output, session) {
     output$Fsummarytbl=DT::renderDT({
       
       datatable(
-        data.frame(desc=c('F2 Position', 'F1 Position', 'Exceeding Noise Thresh',  'Relative Int to max feat Int', 'F2 box size', 'F1 box size', 'Abs Intensity'), 
+        data.frame(desc=c('F2 Position', 
+                          'F1 Position', 
+                          'Exceeding Noise Thresh',  
+                          'Relative Int to max feat Int', 
+                          'F2 box size', 
+                          'F1 box size', 
+                          'Abs Intensity'), 
+                   
                    value=c( paste0(round(plist$cent.f2[idx.f], 4), ' ppm'), 
                             paste0(round(plist$cent.f1[idx.f], 1), ' Hz'), 
-                            paste0(round((plist$Int[idx.f]/noi)*100, 0), ' %'),
+                            paste0(round((plist$Int[idx.f]/plist$noise[idx.f]), 0)),
                             paste0(round((plist$Int[idx.f]/max(plist$Int))*100, 1), ' %'),
                             paste0(round(plist$bb.width.f2[idx.f], 1), ' Hz'), 
                             paste0(round(plist$bb.width.f1[idx.f], 1), ' Hz'),
@@ -214,95 +221,26 @@ server <- function(input, output, session) {
     # Overview plot
     # define submatrix that contains signal within bb dimensions and more (for overview plot)
     bbf2ppm=(plist$bb.width.f2[idx.f]/sf)
-    idx.c=get.idx(c(plist$cent.f2[idx.f]-bbf2ppm-0.05, plist$cent.f2[idx.f]+bbf2ppm+0.05), as.numeric(colnames(jr)))
-    idx.r=get.idx(c(plist$cent.f1[idx.f]-plist$bb.width.f1[idx.f]-5, plist$cent.f1[idx.f]+plist$bb.width.f1[idx.f]+5), as.numeric(rownames(jr)))
+    idx.c=get.idx(c(plist$cent.f2[idx.f]-(10/sf), plist$cent.f2[idx.f]+(10/sf)), as.numeric(colnames(jr)))
+    idx.r=get.idx(c(plist$cent.f1[idx.f]-10, plist$cent.f1[idx.f]+10), as.numeric(rownames(jr)))
     
     sub2=jr[idx.r, idx.c]
     f2sub2=as.numeric(colnames(sub2))
     f1sub2=as.numeric(rownames(sub2))
     
-    plot_ly() %>% add_surface(z=sub2, x=f2sub2, y=f1sub2) %>%
-      add_markers(y=plist$cent.f1[idx.f], x=plist$cent.f2[idx.f], z=plist$Int[idx.f])
+    # plot_ly() %>% add_surface(z=sub2, x=f2sub2, y=f1sub2) %>%
+    #   add_markers(y=plist$cent.f1[idx.f], x=plist$cent.f2[idx.f], z=plist$Int[idx.f])
     #image(sub2)
     
+    #browser()
+    #sub2=pl[[i]][[2]]
+    # test=lapOfG(sub=sub2, f1hz=f1sub2, f2hz=f2sub2*sf, cent_f1hz=plist$cent.f1[idx.f], cent_f2hz=plist$cent.f2[idx.f]*sf, sf=plist$cent.f1[idx.f], npix=seq(0.1, 3, by=0.05))
+    #plot(seq(0.1, 3, by=0.05)[1:length(test[[2]])], test[[2]])
     
-    test=lapOfG(sub=sub2, f1hz=f1sub2, f2hz=f2sub2*sf, cent_f1hz=plist$cent.f1[idx.f], cent_f2hz=plist$cent.f2[idx.f]*sf, sf=sf, npix=seq(0.1, 3, by=0.05))
-    plot(seq(0.1, 3, by=0.05)[1:length(test[[2]])], test[[2]])
-    
-    # 
-    # browser()
-    # ssub=jres::matsymminf2(sub2, which(colnames(sub2)==plist$cent.f2[idx.f]))
-    #              
-    # test1=lapOfG(sub=ssub, f1hz=f1sub2, f2hz=f2sub2*sf, cent_f1hz=plist$cent.f1[idx.f], cent_f2hz=plist$cent.f2[idx.f]*sf, sf=sf, npix=seq(0.1, 3, by=0.05))
-    # points(seq(0.1, 3, by=0.05)[1:length(test1[[2]])], minmax(test1[[2]])+min(test[[2]]), col='red')
-    # 
-    # plot(seq(0.1, 3, by=0.05)[1:length(test1[[2]])], test1[[2]], col='red')
-    # 
-    # plot_ly(z=~ssub, x=as.numeric(colnames(ssub)), y=as.numeric(rownames(ssub))) %>% add_surface()
-    # plot_ly(z=~sub2) %>% add_surface()
-    
-    
-    # idx.c=get.idx(c(plist$cent.f2[idx.f]-bbf2ppm-0.01, plist$cent.f2[idx.f]+bbf2ppm+0.01), as.numeric(colnames(jr)))
-    # idx.r=get.idx(c(plist$cent.f1[idx.f]-plist$bb.width.f1[idx.f]-5, plist$cent.f1[idx.f]+plist$bb.width.f1[idx.f]+5), as.numeric(rownames(jr)))
-    # 
-    # sub2=jr[idx.r, idx.c]
-    # f2sub2=as.numeric(colnames(sub2))
-    # f1sub2=as.numeric(rownames(sub2))
-    # 
-    # plot_ly() %>% add_surface(z=sub2, x=f2sub2, y=f1sub2) %>%
-    #   add_markers(y=plist$cent.f1[idx.f], x=plist$cent.f2[idx.f], z=plist$Int[idx.f])
-    # #image(sub2)
-    # 
-    # test=lapOfG(sub=sub2, f1hz=f1sub2, f2hz=f2sub2*sf, cent_f1hz=plist$cent.f1[idx.f], cent_f2hz=plist$cent.f2[idx.f]*sf, sf=sf, npix=seq(0.01, 3, by=0.005))
-    # 
-    # points(seq(0.01, 3, by=0.005), test[[2]], col='red')
-    # 
-    # 
-    # 
-    # 
-    # 
-    # idx.c=get.idx(c(plist$cent.f2[idx.f]-bbf2ppm-0.001, plist$cent.f2[idx.f]+bbf2ppm+0.001), as.numeric(colnames(jr)))
-    # idx.r=get.idx(c(plist$cent.f1[idx.f]-plist$bb.width.f1[idx.f]-1, plist$cent.f1[idx.f]+plist$bb.width.f1[idx.f]+1), as.numeric(rownames(jr)))
-    # 
-    # sub2=jr[idx.r, idx.c]
-    # f2sub2=as.numeric(colnames(sub2))
-    # f1sub2=as.numeric(rownames(sub2))
-    # 
-    # plot_ly() %>% add_surface(z=sub2, x=f2sub2, y=f1sub2) %>%
-    #   add_markers(y=plist$cent.f1[idx.f], x=plist$cent.f2[idx.f], z=plist$Int[idx.f])
-    # #image(sub2)
-    # 
-    # test=lapOfG(sub=sub2, f1hz=f1sub2, f2hz=f2sub2*sf, cent_f1hz=plist$cent.f1[idx.f], cent_f2hz=plist$cent.f2[idx.f]*sf, sf=sf, npix=seq(0.1, 3, by=0.05))
-    # 
-    # points(seq(0.1, 3, by=0.05), test[[2]], col='green')
-    # 
-    # 
-    # 
-    # 
-    # idx.c=get.idx(c(plist$cent.f2[idx.f]-bbf2ppm, plist$cent.f2[idx.f]+bbf2ppm), as.numeric(colnames(jr)))
-    # idx.r=get.idx(c(plist$cent.f1[idx.f]-plist$bb.width.f1[idx.f]-1, plist$cent.f1[idx.f]+plist$bb.width.f1[idx.f]+1), as.numeric(rownames(jr)))
-    # 
-    # sub2=jr[idx.r, (idx.c-10) : (idx.c+10)]
-    # f2sub2=as.numeric(colnames(sub2))
-    # f1sub2=as.numeric(rownames(sub2))
-    # 
-    # plot_ly() %>% add_surface(z=sub2, x=f2sub2, y=f1sub2) %>%
-    #   add_markers(y=plist$cent.f1[idx.f], x=plist$cent.f2[idx.f], z=plist$Int[idx.f])
-    # #image(sub2)
-    # 
-    # test=lapOfG(sub=sub2, f1hz=f1sub2, f2hz=f2sub2*sf, cent_f1hz=plist$cent.f1[idx.f], cent_f2hz=plist$cent.f2[idx.f]*sf, sf=sf, npix=seq(0.1, 3, by=0.05))
-    # 
-    # points(seq(0.1, 3, by=0.05), test[[2]], col='green')
-    
-    
-    
-    
-    
-    
-    
+   
     plist1=plist
-    # plist1$P.peakOri=0.4
-    # plist1$P.peakOri[idx.f]=1
+    plist1$P.peakOri=0
+    plist1$P.peakOri[idx.f]=1
     idx=which(plist$cent.f1>=min(f1sub2) & plist$cent.f1<=max(f1sub2))
     plist1=plist1[idx,]
     
@@ -313,13 +251,14 @@ server <- function(input, output, session) {
     )
     
     output$featbb_overviewLOG=renderPlot(
-      plotjres_overlay1D_bboxNull(log10(sub2+abs(min(sub2))+1), t2.lim=range(f2sub2), t1.lim=range(f1sub2), spec.1d=Xbl, ppm.1d=ppm, z.probs=0,  SF=sf , bbox=plist1,  title='', pPeak= 0.6, tilt=F, addProjpp=NULL)
+      plotjres_overlay1D_bboxNull(log10(sub2+abs(min(sub2))+1), t2.lim=range(f2sub2), t1.lim=range(f1sub2), spec.1d=Xbl, ppm.1d=ppm, z.probs=0,  SF=sf , bbox=plist1,  title='',  tilt=F, addProjpp=NULL)
     )
     
     featurelist$featureMatrisForLoG = sub2
     featurelist$sf = sf
     featurelist$noise = noi
     
+    #browser()
     
     npix=seq(0.01, 2, by=0.05)
     log_sd=jres::lapOfG(sub2, f1sub2, f2sub2*sf, plist$cent.f1[idx.f], plist$cent.f2[idx.f]*sf, sf, npix)
@@ -357,16 +296,13 @@ server <- function(input, output, session) {
         }
       )
     
-    
-    
-    
-    
-    
-    
+
     # # create plotly figures with peaks in bounding box
-    bbf2ppm=(plist$bb.width.f2[idx.f]/sf)
-    idx.c=get.idx(c(plist$cent.f2[idx.f]-bbf2ppm, plist$cent.f2[idx.f]+bbf2ppm), f2ppm)
-    idx.r=get.idx(c(plist$cent.f1[idx.f]-plist$bb.width.f1[idx.f], plist$cent.f1[idx.f]+plist$bb.width.f1[idx.f]), f1hz)
+    #bbf2ppm=(plist$bb.width.f2[idx.f]/sf)
+    #browser()
+    idx.r=max(((plist$f1.idx[idx.f]+1)-plist$add_row_feat[idx.f]), 1):min(c(((plist$f1.idx[idx.f]+1)+plist$add_row_feat[idx.f]), nrow(jr)))
+    idx.c=max(((plist$f2.idx[idx.f]+1)-plist$add_col_feat[idx.f]), 1):min(c(((plist$f2.idx[idx.f]+1)+plist$add_col_feat[idx.f]), ncol(jr)))
+    
     if(length(idx.c)<2 | length(idx.r)<2){
       idx.r=c(max((idx.r[1]-2), 1):min(length(f1hz),(idx.r[length(idx.r)]+2)));
       idx.c=c(max((idx.c[1]-2), 1):min(length(f2ppm),(idx.c[length(idx.c)]+2)));
@@ -374,39 +310,49 @@ server <- function(input, output, session) {
     }else{
       output$info=renderText(paste(''))
     }
-    sub=jr[idx.r, idx.c]
     
+    
+    
+    sub=pl[[fidx()]][[2]]
+    
+    #sub=featm[idx.f,,]
     #image(featm[idx.f,,])
     
     
     # create plot
     noiss=sub
-    noiss[,]=noi/plist$Int[idx.f]
+    noiss[,]=noi
     
   
-    subf1=as.numeric(rownames(sub))
-    subf2=as.numeric(colnames(sub))
+    # subf1=as.numeric(rownames(sub))
+    # subf2=as.numeric(colnames(sub))
     
     #if(idx.f==5){browser()}
     featurelist$featureMatrix = sub
     featurelist$featureInfo = plist[idx.f,]
     
-    
-    output$featbb=renderPlotly(
-      plot_ly(x=subf2, y=subf1) %>% 
+    # x=subf2, y=subf1
+    output$featbb_minmax=renderPlotly(
+      plot_ly() %>% 
         add_surface(z=~noiss, colors='black', opacity = 0.7, showscale=F) %>%
-        add_surface(z=~sub, colorscale = sc, showscale=T) %>%
-        add_markers(x=plist$cent.f2[idx.f], y=plist$cent.f1[idx.f], z=plist$Int[idx.f], sizes=40, colors='pink')
+        add_surface(z=~sub, colorscale = sc, showscale=T) #%>%
+        #add_markers(x=plist$cent.f2[idx.f], y=plist$cent.f1[idx.f], z=plist$Int[idx.f], sizes=40, colors='pink')
     )
     
-    if(min(sub)<0){
-      sub=sub+abs(min(sub))
-    }
+    # if(min(sub)<0){
+    #   sub=sub+abs(min(sub))
+    # }
     
-    output$featbb_minmax=renderPlotly(
-      plot_ly(x=subf2, y=subf1) %>% 
-        add_surface(z=~minmax(sub), showscale=T) %>%
-        add_markers(x=plist$cent.f2[idx.f], y=plist$cent.f1[idx.f], z=1.2, sizes=40, colors='pink')
+    #browser()
+    sub_ori=jr[idx.r, idx.c]
+    subf1=as.numeric(rownames(sub_ori))
+    subf2=as.numeric(colnames(sub_ori))
+    
+    output$featbb=renderPlotly(
+      #x=subf2, y=subf1
+      plot_ly(x=subf2, y=subf1) %>%
+        add_surface(z=~minmax(sub_ori), showscale=T) #%>%
+        #add_markers(x=plist$cent.f2[idx.f], y=plist$cent.f1[idx.f], z=1.2, sizes=40, colors='pink')
     )
     
     
@@ -526,7 +472,8 @@ server <- function(input, output, session) {
   
   observeEvent(input$'save_img_train', {
     realPeaks=input$featimg_cells_selected
-    save(img_df, realPeaks, file='FeatClassManual.Rdata')
+    
+    save(img_df, realPeaks, path, file=paste0('FeatClassManual_',format(Sys.time(), '%Y_%m_%d_%H_%M'), '.Rdata'))
   })
   
   

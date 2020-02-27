@@ -41,23 +41,95 @@ for(i in 1:6){
 }
 
 #test=do.call(cbind, clist)
+load(file='www/Feature_mat_Rdata') # featm
 
-img_df=data.frame(do.call(cbind, clist), stringsAsFactors = F)
-
-
-print('start')
-
+load('FeatClassManual_2020_02_26_10_54.Rdata')
+load('FeatClassManual_2020_02_27_16_03.Rdata')
 
 
+img_df # df six cols showing features
+realPeaks # position peaks in img.df
+feats=apply(realPeaks, 1, function(i, df=img_df){
+  
+  df[i[1], i[2]]
+  
+})
+
+fidx=as.numeric(gsub('.png\"></img>', '', gsub('<img src=\"Feat_', '', feats, fixed = T), fixed = T))
+
+image(featm[fidx[200], ,])
+
+out=rep(0, dim(featm)[1])
+out[fidx]=1
+save(out, featm, file='FeatManual_2020_02_27_16_03_Philip_Training.Rdata')
+
+
+library(reticulate)
+library(tensorflow)
+library(jres)
+library(keras)
+
+use_condaenv(condaenv = 'jresppick', conda = "auto", required = T)
+
+load('FeatManual_2020_02_27_16_03_Philip_Training.Rdata')
+
+
+modelc <- keras_model_sequential() %>% 
+  layer_conv_2d(filters = 32, kernel_size = c(3,3), activation = "relu", 
+                input_shape = c(1, 32,32, 1)) %>% 
+  layer_max_pooling_2d(pool_size = c(2,2)) %>% 
+  layer_conv_2d(filters = 64, kernel_size = c(3,3), activation = "relu") %>% 
+  layer_max_pooling_2d(pool_size = c(2,2)) %>% 
+  layer_conv_2d(filters = 64, kernel_size = c(3,3), activation = "relu")
+
+modelc %>% 
+  layer_flatten() %>% 
+  layer_dense(units = 64, activation = "relu") %>% 
+  layer_dense(units = 2, activation = "softmax")
+
+modelc %>% compile(
+  optimizer = "adam",
+  loss = "sparse_categorical_crossentropy",
+  metrics = "accuracy"
+)
+
+modelc %>% 
+  fit(
+    x = featm, y = out,
+    epochs = 10,
+    validation_split = 0.3,
+    verbose = 2
+  )
 
 
 
 
+model <- keras_model_sequential() %>% 
+  layer_flatten(input_shape = c(32, 32)) %>% 
+  layer_dense(units = 128, activation = "relu") %>% 
+  layer_dropout(0.2) %>% 
+  layer_dense(2, activation = "softmax")
 
+model %>% 
+  compile(
+    loss = "sparse_categorical_crossentropy",
+    optimizer = "adam",
+    metrics = "accuracy"
+  )
 
+model %>% 
+  fit(
+    x = featm, y = out,
+    epochs = 14,
+    validation_split = 0.3,
+    verbose = 2
+  )
 
+model %>% 
+  evaluate(featm, out, verbose = 2)
 
-
+predictions=predict(model, featm)
+save_model_tf(model, file='newsequential_mod_Philip.Rdat')
 
 
 
@@ -115,13 +187,15 @@ plist$P.peakOri=NA
 plist$P.peakOri[idx]=predictions[-nrow(predictions),2]
 
 plotjres_overlay1D_bboxNull(log(jr), spec.1d = Xbl, ppm.1d = ppm, SF=sf, bbox = plist, t1.lim = c(-20,20), 
-                            t2.lim = c(7.4,8))
+                            t2.lim = c(6.8, 7))
+plist1=plist[plist$P.peakOri>0.5,]
+plotjres_overlay1D_bboxNull(log(jr), spec.1d = Xbl, ppm.1d = ppm, SF=sf, bbox = plist1, t1.lim = c(-20,20), 
+                            t2.lim = c(1,1.2))
 
 
 
-
-
-
+plotjres_overlay1D_bboxNull(log(jr), spec.1d = Xbl, ppm.1d = ppm, SF=sf, bbox = plist1, t1.lim = c(-20,20), 
+                            t2.lim = c(3,3.1))
 
 
 
