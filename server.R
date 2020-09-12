@@ -1,6 +1,6 @@
+# Define server logic
 library(plotly)
 
-# Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
   # fid is feature ID of feature shown
