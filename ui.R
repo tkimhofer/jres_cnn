@@ -1,4 +1,4 @@
-# Define UI for application that draws a histogram
+# Define user interface
 ui<-fluidPage(
   title='jRes',
   #titlePanel('Jres Feature Check'), # h1(textOutput('IDspec'))
